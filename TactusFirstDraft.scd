@@ -1,42 +1,75 @@
-/* Tactus — Tap Detection (Minimal) */
 
 (
-OSCdef(\tap).free;
+// Boot server (audio engine)
+s.waitForBoot({
 
-// --- tune these ---
-~tapThresh = 1.35;      // raise if too sensitive, lower if it misses taps
-~tapCooldown = 0.12;    // seconds; prevents double triggers
+    // Simpl   e percussive synth
+    SynthDef(\tactusTap, { |out=0, amp=0.6|
+        var env = EnvGen.kr(Env.perc(0.001, 0.12), doneAction:2);
+        var sig = (SinOsc.ar(180) * env) + (WhiteNoise.ar(0.2) * env);
+        Out.ar(out, (sig * amp).dup);
+    }).add;
+
+    s.sync; // IMPORTANT: waits until SynthDef is actually on the server
+
+    "Audio test: you should hear a tap now.".postln;
+    Synth(\tactusTap); // plays once
+});
+)
+
+
+
+
+
+
+
+
+
+
+
+/* Tactus — Tap triggers percussive sound */
+
+(
+/////////////////////////////////////////////////
+// 1. Simple percussive synth
+/////////////////////////////////////////////////
+
+SynthDef(\tactusTap, { |out=0, amp=0.5|
+    var env = EnvGen.kr(Env.perc(0.001, 0.12), doneAction:2);
+    var sig;
+
+    // short clicky thud
+    sig = SinOsc.ar(180) * env;
+    sig = sig + (WhiteNoise.ar(0.15) * env);
+
+    Out.ar(out, (sig * amp).dup);
+}).add;
+
+/////////////////////////////////////////////////
+// 2. Tap detection on accelerometer Z
+/////////////////////////////////////////////////
+
+OSCdef(\tapZ).free;
+
+// Tune these
+~zThresh = 10.0;       // trigger threshold
+~tapCooldown = 0.0.1;   // seconds
 ~lastTap = 0.0;
 
-// OPTIONAL: deadzone to reduce tiny noise (usually fine to leave)
-~deadzone = 0.03;
-
-// Change this to match the OSC address your app sends for accel.
-// If you're not sure, turn OSCFunc.trace(true) on and check.
-~accelAddr = '/accel';
-
-OSCdef(\tap, { |msg, time, addr, recvPort|
-    var x = msg[1].asFloat;
-    var y = msg[2].asFloat;
-    var z = msg[3].asFloat;
-
-    // deadzone
-    if(x.abs < ~deadzone) { x = 0 };
-    if(y.abs < ~deadzone) { y = 0 };
-    if(z.abs < ~deadzone) { z = 0 };
-
-    // magnitude (overall acceleration)
-    var mag = (x.squared + y.squared + z.squared).sqrt;
-
-    // debounce using time
+OSCdef(\tapZ, { |msg|
+    var z   = msg[1].asFloat;
     var now = SystemClock.seconds;
 
-    if((mag > ~tapThresh) and: { (now - ~lastTap) > ~tapCooldown }) {
+    if((z > ~zThresh) and: { (now - ~lastTap) > ~tapCooldown }) {
         ~lastTap = now;
-        ("TAP!  mag=" ++ mag.round(0.01) ++ "  from " ++ addr.ip).postln;
+
+        // play sound
+        Synth(\tactusTap, [\amp, 0.6]);
+
+        ("TAP -> sound  z=" ++ z.round(0.01)).postln;
     };
+}, "/accelerometer/z");
 
-}, ~accelAddr);
-
-("Tap detection armed on " ++ ~accelAddr ++ " (port " ++ NetAddr.langPort ++ ")").postln;
-) 
+"TACTUS: tap → sound active (port ".postln;
+NetAddr.langPort.postln;
+)
