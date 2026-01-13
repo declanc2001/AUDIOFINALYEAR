@@ -23,17 +23,6 @@ SynthDef(\tactusHit, { |out=0, vel=0.6|
     Out.ar(out, (sig * amp).dup);
 }).add;
 
-SynthDef(\tactusKick, { |out=0, vel=0.6|
-    var amp = vel.linlin(0, 1, 0.2, 1.0);
-    var env = EnvGen.kr(Env.perc(0.001, 0.25), doneAction:2);
-    var freq = vel.linexp(0, 1, 45, 70);
-
-    var sig = SinOsc.ar(freq) * env;
-    sig = sig + (BPF.ar(WhiteNoise.ar(0.15), 120, 0.5) * env);
-
-    Out.ar(out, (sig * amp).dup);
-}).add;
-
 s.sync;
 
     /////////////////////////////////
