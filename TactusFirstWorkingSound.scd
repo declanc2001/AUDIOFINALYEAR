@@ -134,12 +134,6 @@ OSCdef(\tapZ, { |msg|
 
         // base sound
         Synth(\tactusHit, [\vel, vel]);
-
-        // optional kick layer
-        if(~kickLayerOn) {
-            Synth(\tactusKick, [\vel, vel]);
-        };
-
         { ~updateUI.() }.defer;
     };
 }, "/accelerometer/z");
